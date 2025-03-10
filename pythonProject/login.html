@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SekurePay Login</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #1f4037, #99f2c8);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .container {
+      background: #ffffff;
+      padding: 40px 30px;
+      border-radius: 20px;
+      box-shadow: 0px 20px 30px rgba(0,0,0,0.2);
+      width: 350px;
+      text-align: center;
+      position: relative;
+      animation: fadeIn 1s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      0% { opacity: 0; transform: translateY(-50px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    .logo {
+      font-size: 32px;
+      font-weight: 700;
+      color: #1f4037;
+      margin-bottom: 20px;
+      animation: slideIn 0.5s ease forwards;
+    }
+
+    @keyframes slideIn {
+      0% { opacity: 0; transform: translateY(-20px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    h2 {
+      margin-bottom: 10px;
+      color: #333;
+      font-weight: 500;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 12px 0;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: 0.3s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #1f4037;
+      box-shadow: 0 0 8px rgba(31, 64, 55, 0.4);
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #1f4037;
+      color: #fff;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: #14532d;
+    }
+
+    .error {
+      color: #ff4d4d;
+      margin: 10px 0;
+      font-size: 14px;
+      min-height: 20px;
+      transition: 0.3s;
+    }
+
+    #pin-form {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.5s ease;
+      display: none;
+    }
+
+    #pin-form.show {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .lock-icon {
+      position: absolute;
+      top: -40px;
+      left: calc(50% - 25px);
+      background: #fff;
+      border-radius: 50%;
+      padding: 10px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); box-shadow: 0 0 10px rgba(31, 64, 55, 0.5); }
+      50% { transform: scale(1.1); box-shadow: 0 0 20px rgba(31, 64, 55, 0.7); }
+      100% { transform: scale(1); box-shadow: 0 0 10px rgba(31, 64, 55, 0.5); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="lock-icon">🔒</div>
+  <div class="logo">SekurePay</div>
+
+  <h2 id="form-title">Enter Username</h2>
+  <div id="error-msg" class="error"></div>
+
+  <div id="username-form">
+    <input type="text" id="username" placeholder="Username" />
+    <button onclick="submitUsername()">Next</button>
+  </div>
+
+  <div id="pin-form">
+    <input type="password" id="pin" placeholder="4-Digit PIN" maxlength="4" />
+    <button onclick="submitPin()">Login</button>
+  </div>
+</div>
+
+<script>
+  let currentUsername = "";
+
+  async function submitUsername() {
+    const username = document.getElementById("username").value.trim();
+    if (!username) {
+      showError("Please enter your username");
+      return;
+    }
+
+    try {
+      const response = await fetch('http://127.0.0.1:5000/verify-username', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username })
+      });
+
+      const result = await response.json();
+
+      if (result.valid) {
+        currentUsername = username;
+        document.getElementById("username-form").style.display = "none";
+        const pinForm = document.getElementById("pin-form");
+        pinForm.classList.add("show");
+        document.getElementById("form-title").innerText = "Enter PIN";
+        showError("");
+      } else {
+        showError("Username not found");
+      }
+    } catch (error) {
+      showError("An error occurred. Try again later.");
+      console.error(error);
+    }
+  }
+
+  async function submitPin() {
+    const pin = document.getElementById("pin").value.trim();
+    if (!pin || pin.length !== 4) {
+      showError("Please enter a valid 4-digit PIN");
+      return;
+    }
+
+    try {
+      const response = await fetch('http://127.0.0.1:5000/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: currentUsername, pin })
+      });
+
+      const result = await response.json();
+
+      if (result.valid) {
+        showError("");
+        document.getElementById("form-title").innerText = "Login Successful!";
+        document.getElementById("pin-form").style.display = "none";
+
+        setTimeout(() => {
+          window.location.href = "http://127.0.0.1:5000/dashboard";
+        }, 1000);
+      } else {
+        showError("Incorrect PIN");
+      }
+    } catch (error) {
+      showError("An error occurred. Try again later.");
+      console.error(error);
+    }
+  }
+
+  function showError(message) {
+    document.getElementById("error-msg").innerText = message;
+  }
+</script>
+
+</body>
+</html>
